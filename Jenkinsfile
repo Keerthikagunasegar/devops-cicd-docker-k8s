@@ -3,13 +3,14 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "keerthikagunasegar/cicd-webapp"
+        IMAGE_TAG = "v${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE ./webapp'
+                sh 'docker build -t $DOCKER_IMAGE:$IMAGE_TAG ./webapp'
             }
         }
 
@@ -23,14 +24,19 @@ pipeline {
 
         stage('Push Image to DockerHub') {
             steps {
-                sh 'docker push $DOCKER_IMAGE'
+                sh 'docker push $DOCKER_IMAGE:$IMAGE_TAG'
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s/deployment.yaml'
-                sh 'kubectl apply -f k8s/service.yaml'
+                sh 'kubectl set image deployment/cicd-webapp cicd-webapp=$DOCKER_IMAGE:$IMAGE_TAG'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl rollout status deployment/cicd-webapp'
             }
         }
 
